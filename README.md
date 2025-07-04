@@ -1,4 +1,4 @@
-# 🤖 Recruitment Agent - Prototipo Funcional
+# 🤖 Recruitment Agent
 
 Sistema automatizado para analizar CVs y compararlos contra vacantes usando IA (Gemini API).
 
@@ -20,71 +20,76 @@ Sistema automatizado para analizar CVs y compararlos contra vacantes usando IA (
 ## 📁 Estructura del Proyecto
 
 ```
-recruitment-agent/
+Recruitment-Agent/
 ├── main.py              # Aplicación principal FastAPI
 ├── requirements.txt     # Dependencias Python
-├── env.example         # Variables de entorno ejemplo
-├── templates/          # Plantillas HTML
-│   ├── index.html      # Página principal
-│   └── admin.html      # Panel de administración
-├── uploads/            # Archivos temporales (se crea automáticamente)
+├── templates/           # Plantillas HTML
+│   ├── index.html       # Página principal
+│   └── admin.jinja2     # Panel de administración
+├── uploads/             # Archivos temporales (se crea automáticamente)
+├── static/              # Archivos estáticos (vacío por defecto)
+├── .gitignore           # Exclusiones de git
 └── README.md
 ```
 
-## 🚀 Instalación y Uso
+## 🚀 Instalación y Uso Local
 
-### 1. Instalar dependencias
-```bash
-pip install -r requirements.txt
-```
+1. Instala las dependencias necesarias:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 2. Configurar API Key
-```bash
-cp env.example .env
-# Editar .env y agregar tu GEMINI_API_KEY
-```
+2. Ejecuta la aplicación localmente:
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port 8000
+   ```
+   Esto levantará el servidor en http://127.0.0.1:8000
 
-### 3. Ejecutar la aplicación
-```bash
-python main.py
-```
+3. Accede a la aplicación desde tu navegador en [http://127.0.0.1:8000](http://127.0.0.1:8000)
 
-### 4. Acceder a la aplicación
-- **Página principal**: http://localhost:8000
-- **Panel admin**: http://localhost:8000/admin
-- **Documentación API**: http://localhost:8000/docs
+4. Cuando subas un CV, la aplicación te pedirá tu API Key de Gemini (no necesitas editar archivos de entorno).
 
-## 🔧 Configuración
+## 🚀 Despliegue en Render o Producción
 
-### Variables de Entorno (.env)
-```env
-GEMINI_API_KEY=tu_api_key_de_gemini
-PORT=8000
-HOST=0.0.0.0
-```
+1. Sube el proyecto a GitHub.
+2. En Render, selecciona el repositorio y usa el siguiente comando de arranque:
+   ```bash
+   uvicorn main:app --host 0.0.0.0 --port $PORT
+   ```
+3. No necesitas configurar variables de entorno para la API key, ya que se ingresa desde el frontend.
 
-### Obtener API Key de Gemini
+## Cómo obtener tu API Key de Gemini
+
 1. Ve a [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Crea una nueva API key
-3. Copia la key en tu archivo `.env`
+2. Inicia sesión con tu cuenta de Google (de preferencia personal, no institucional).
+3. Haz clic en "Create API key" o "Crear clave de API".
+4. Copia la clave generada (comienza con `AIza...`).
+5. Pega la clave en el campo correspondiente de la aplicación web.
+
+**Nota:**
+- La API key es personal y tiene límites de uso gratuitos.
+- Si ves errores de cuota, puedes crear otra clave o esperar al siguiente día.
+- No compartas tu clave en foros, repositorios públicos ni con terceros.
 
 ## 📋 Uso del Sistema
 
 ### 1. Subir CV
-1. Ve a http://localhost:8000
-2. Selecciona una vacante del dropdown
-3. Arrastra o selecciona un archivo PDF o Word
-4. Haz clic en "Analizar CV"
+1. Ve a la página principal.
+2. Selecciona una vacante del dropdown.
+3. Ingresa tu API key de Gemini.
+4. Arrastra o selecciona un archivo PDF o Word.
+5. Haz clic en "Analizar CV".
 
 ### 2. Ver Resultados
 El sistema mostrará:
 - **Calificación**: Muy compatible, Compatible, No compatible
 - **Recomendación**: Agendar entrevista, Revisar por reclutador, Descartar
 - **Justificación**: Explicación del análisis
+- **Mensaje para el candidato**: Texto personalizado generado por IA
 
 ### 3. Administrar Vacantes
-1. Ve a http://localhost:8000/admin
-2. Agrega nuevas vacantes con título y descripción
+1. Ve a /admin
+2. Agrega nuevas vacantes con título y descripción (puedes cargar desde PDF o Word)
 3. Las vacantes estarán disponibles en el dropdown principal
 
 ## 🔌 API Endpoints
@@ -139,16 +144,9 @@ El sistema usa un prompt optimizado que:
 
 ## 🐛 Solución de Problemas
 
-### Error: "Gemini API key not configured"
-- Verifica que tu archivo `.env` tenga `GEMINI_API_KEY=tu_key_aqui`
-
-### Error: "Could not extract text from file"
-- Asegúrate de que el archivo sea PDF o DOCX válido
-- Verifica que el archivo no esté corrupto
-
-### Error: "Invalid response from Gemini API"
-- Verifica tu conexión a internet
-- Confirma que tu API key sea válida
+- **Error: la API key es inválida o está mal configurada**: Verifica que tu clave sea correcta y esté vigente.
+- **Error de cuota**: Espera al siguiente día o crea una nueva API key.
+- **Error al extraer texto**: Asegúrate de que el archivo sea PDF o DOCX válido.
 
 ## 📄 Licencia
 
@@ -160,39 +158,4 @@ MIT License - Libre para uso comercial y personal.
 2. Crea una rama feature
 3. Commit tus cambios
 4. Push a la rama
-5. Abre un Pull Request
-
-## Cómo correr el proyecto en localhost
-
-1. Instala las dependencias necesarias:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-2. (Opcional) Si necesitas el proceso Context7 MCP, en otra terminal ejecuta:
-   ```bash
-   npx -y @upstash/context7-mcp@latest
-   ```
-   Si no sabes para qué sirve, puedes omitir este paso y probar solo el backend.
-
-3. Ejecuta el backend:
-   ```bash
-   python3 main.py
-   ```
-   Esto levantará el servidor en http://127.0.0.1:8000
-
-4. Accede a la aplicación desde tu navegador en [http://127.0.0.1:8000](http://127.0.0.1:8000)
-
-## Cómo obtener tu API Key de Gemini
-
-1. Ve a [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. Inicia sesión con tu cuenta de Google (de preferencia personal, no institucional).
-3. Haz clic en "Create API key" o "Crear clave de API".
-4. Copia la clave generada (comienza con `AIza...`).
-5. Guarda tu clave en un lugar seguro. No la compartas públicamente.
-6. Usa esta clave en el campo correspondiente de la aplicación (no es necesario ponerla en archivos de configuración).
-
-**Nota:**
-- La API key es personal y tiene límites de uso gratuitos.
-- Si ves errores de cuota, puedes crear otra clave o esperar al siguiente día.
-- No compartas tu clave en foros, repositorios públicos ni con terceros. 
+5. Abre un Pull Request 
