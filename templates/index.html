@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recruitment Agent - Análisis de CV</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            background-color: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        .upload-area:hover {
+            border-color: #007bff;
+            background-color: #e3f2fd;
+        }
+        .upload-area.dragover {
+            border-color: #28a745;
+            background-color: #d4edda;
+        }
+        .result-card {
+            border-left: 4px solid #007bff;
+        }
+        .result-card.muy-compatible {
+            border-left-color: #28a745;
+        }
+        .result-card.compatible {
+            border-left-color: #ffc107;
+        }
+        .result-card.no-compatible {
+            border-left-color: #dc3545;
+        }
+        .loading {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <h1 class="text-center mb-4">🤖 Recruitment Agent</h1>
+                <p class="text-center text-muted">Análisis inteligente de CVs usando IA</p>
+                
+                <div class="text-end mb-3">
+                    <a href="/admin" class="btn btn-outline-secondary btn-sm">
+                        <i class="bi bi-gear"></i> Administrar Vacantes
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">📄 Subir CV</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="uploadForm" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="jobSelect" class="form-label">Seleccionar Vacante:</label>
+                                <select class="form-select" id="jobSelect" name="job_index" required>
+                                    {% for job in jobs %}
+                                    <option value="{{ loop.index0 }}">{{ job.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="apiKeyInput" class="form-label">API Key de Gemini:
+                                    <button type="button" class="btn btn-link p-0 align-baseline" data-bs-toggle="modal" data-bs-target="#apiKeyModal" style="vertical-align: middle;">
+                                        <i class="bi bi-question-circle-fill text-info" style="font-size:1.2em;"></i>
+                                    </button>
+                                </label>
+                                <input type="password" class="form-control" id="apiKeyInput" placeholder="Ingresa tu API Key" required>
+                                <div class="form-text">Tu clave no se almacena en el servidor.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Archivo CV (PDF o Word):</label>
+                                <div class="upload-area" id="uploadArea">
+                                    <i class="bi bi-cloud-upload fs-1 text-muted"></i>
+                                    <p class="mt-2">Arrastra tu CV aquí o haz clic para seleccionar</p>
+                                    <p class="text-muted small">Soporta PDF y DOCX</p>
+                                    <input type="file" id="cvFile" name="file" accept=".pdf,.docx" class="d-none" required>
+                                </div>
+                                <div id="fileInfo" class="mt-2" style="display: none;">
+                                    <div class="alert alert-info">
+                                        <strong>Archivo seleccionado:</strong> <span id="fileName"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary w-100" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm me-2 loading" role="status"></span>
+                                Analizar CV
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">📊 Resultados del Análisis</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="results" style="display: none;">
+                            <div class="mb-3">
+                                <h6>Archivo analizado:</h6>
+                                <p class="text-muted" id="resultFileName"></p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Vacante:</h6>
+                                <p class="text-muted" id="resultJobTitle"></p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Calificación:</h6>
+                                <span class="badge fs-6" id="resultCalificacion"></span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Recomendación:</h6>
+                                <span class="badge fs-6" id="resultRecomendacion"></span>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Justificación:</h6>
+                                <p class="text-muted" id="resultJustificacion"></p>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6>Mensaje para el Candidato:</h6>
+                                <p class="text-primary" id="resultMensajeCandidato"></p>
+                            </div>
+                        </div>
+                        
+                        <div id="noResults" class="text-center text-muted">
+                            <i class="bi bi-graph-up fs-1"></i>
+                            <p class="mt-2">Sube un CV para ver los resultados del análisis</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de ayuda para API Key -->
+    <div class="modal fade" id="apiKeyModal" tabindex="-1" aria-labelledby="apiKeyModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="apiKeyModalLabel">¿Cómo obtener tu API Key de Gemini?</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+          </div>
+          <div class="modal-body">
+            <ol>
+              <li>Ve a <a href="https://makersuite.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a></li>
+              <li>Inicia sesión con tu cuenta de Google (de preferencia personal).</li>
+              <li>Haz clic en <b>"Create API key"</b> o <b>"Crear clave de API"</b>.</li>
+              <li>Copia la clave generada (comienza con <code>AIza...</code>).</li>
+              <li>Pega la clave en este campo.</li>
+            </ol>
+            <div class="alert alert-warning mt-3" role="alert">
+              <b>¡Importante!</b> No compartas tu clave en foros, repositorios públicos ni con terceros.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // File upload handling
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('cvFile');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const uploadForm = document.getElementById('uploadForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.querySelector('.loading');
+        
+        // Drag and drop functionality
+        uploadArea.addEventListener('click', () => fileInput.click());
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect();
+            }
+        });
+        
+        fileInput.addEventListener('change', handleFileSelect);
+        
+        function handleFileSelect() {
+            const file = fileInput.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                fileInfo.style.display = 'block';
+            } else {
+                fileInfo.style.display = 'none';
+            }
+        }
+        
+        // Form submission
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData();
+            const file = fileInput.files[0];
+            const jobIndex = document.getElementById('jobSelect').value;
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            
+            if (!file) {
+                alert('Por favor selecciona un archivo');
+                return;
+            }
+            
+            formData.append('file', file);
+            formData.append('job_index', jobIndex);
+            formData.append('api_key', apiKeyInput.value);
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            loading.style.display = 'inline-block';
+            submitBtn.textContent = 'Analizando...';
+            
+            try {
+                const response = await fetch('/upload-cv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    let errorMsg = `Error: ${response.status}`;
+                    try {
+                        const errorData = await response.json();
+                        if (errorData && errorData.detail) {
+                            errorMsg = errorData.detail;
+                        }
+                    } catch {}
+                    throw new Error(errorMsg);
+                }
+                
+                const result = await response.json();
+                displayResults(result);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                let userMsg = error.message;
+                if (userMsg.includes('Error: la API key es inválida o está mal configurada')) {
+                    userMsg = 'Error: la API key es inválida o está mal configurada. Verifica tu clave de acceso.';
+                }
+                alert('Error al analizar el CV: ' + userMsg);
+            } finally {
+                // Reset loading state
+                submitBtn.disabled = false;
+                loading.style.display = 'none';
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2 loading" role="status"></span>Analizar CV';
+            }
+        });
+        
+        function displayResults(result) {
+            const results = document.getElementById('results');
+            const noResults = document.getElementById('noResults');
+            
+            // Update result fields
+            document.getElementById('resultFileName').textContent = result.filename;
+            document.getElementById('resultJobTitle').textContent = result.job_title;
+            
+            const calificacion = document.getElementById('resultCalificacion');
+            calificacion.textContent = result.analysis.calificacion;
+            calificacion.className = 'badge fs-6';
+            
+            // Set badge color based on qualification
+            if (result.analysis.calificacion === 'Muy compatible') {
+                calificacion.classList.add('bg-success');
+            } else if (result.analysis.calificacion === 'Compatible') {
+                calificacion.classList.add('bg-warning', 'text-dark');
+            } else {
+                calificacion.classList.add('bg-danger');
+            }
+            
+            const recomendacion = document.getElementById('resultRecomendacion');
+            recomendacion.textContent = result.analysis.recomendacion;
+            recomendacion.className = 'badge fs-6';
+            
+            // Set badge color based on recommendation
+            if (result.analysis.recomendacion === 'Agendar entrevista') {
+                recomendacion.classList.add('bg-success');
+            } else if (result.analysis.recomendacion === 'Revisar por reclutador') {
+                recomendacion.classList.add('bg-warning', 'text-dark');
+            } else {
+                recomendacion.classList.add('bg-danger');
+            }
+            
+            document.getElementById('resultJustificacion').textContent = result.analysis.justificacion;
+            document.getElementById('resultMensajeCandidato').textContent = result.analysis.mensaje_candidato || '';
+            
+            // Show results
+            noResults.style.display = 'none';
+            results.style.display = 'block';
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+</body>
+</html> 

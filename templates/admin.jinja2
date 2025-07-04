@@ -1,0 +1,271 @@
+<!-- Template Jinja2 - Los errores de linter son normales -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin - Recruitment Agent</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1>⚙️ Administración de Vacantes</h1>
+                    <a href="/" class="btn btn-outline-primary">
+                        <i class="bi bi-arrow-left"></i> Volver al Inicio
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">➕ Agregar Nueva Vacante</h5>
+                    </div>
+                    <div class="card-body">
+                        <form id="addJobForm">
+                            <div class="mb-3">
+                                <label for="jobTitle" class="form-label">Título de la Vacante:</label>
+                                <input type="text" class="form-control" id="jobTitle" name="title" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="jobFile" class="form-label">Cargar descripción desde archivo (PDF o Word):</label>
+                                <input type="file" class="form-control" id="jobFile" accept=".pdf,.docx">
+                                <div class="form-text">Opcional. El texto extraído reemplazará la descripción si se selecciona un archivo.</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="jobDescription" class="form-label">Descripción:</label>
+                                <textarea class="form-control" id="jobDescription" name="description" rows="10" required 
+                                    placeholder="Incluye requisitos, responsabilidades, tecnologías, etc."></textarea>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-plus-circle"></i> Agregar Vacante
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0">📋 Vacantes Disponibles</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="jobsList">
+                            {% for job in jobs %}
+                            <div class="card mb-3" id="job-{{ loop.index0 }}" data-job-index="{{ loop.index0 }}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div class="flex-grow-1">
+                                            <h6 class="card-title">{{ job.title }}</h6>
+                                            <p class="card-text text-muted small">
+                                                {{ job.description[:200] }}{% if job.description|length > 200 %}...{% endif %}
+                                            </p>
+                                            <small class="text-muted">Vacante #{{ loop.index }}</small>
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary" onclick="editJob({{ loop.index0 }})">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            {% if jobs|length > 1 %}
+                                            <button class="btn btn-outline-danger" onclick="deleteJob({{ loop.index0 }})">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if jobs|length == 0 %}
+                        <div class="text-center text-muted">
+                            <i class="bi bi-inbox fs-1"></i>
+                            <p class="mt-2">No hay vacantes disponibles</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/docx/7.2.1/docx.min.js"></script>
+    <script>
+        const addJobForm = document.getElementById('addJobForm');
+        const jobsList = document.getElementById('jobsList');
+        
+        addJobForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = new FormData(addJobForm);
+            
+            try {
+                const response = await fetch('/add-job', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                alert('Vacante agregada exitosamente!');
+                
+                // Reload page to show new job
+                location.reload();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al agregar la vacante: ' + error.message);
+            }
+        });
+        
+        // Edit job function
+        window.editJob = async function(jobIndex) {
+            const jobCard = document.getElementById(`job-${jobIndex}`);
+            const title = jobCard.querySelector('.card-title').textContent;
+            const description = jobCard.querySelector('.card-text').textContent;
+            
+            // Create modal for editing
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Editar Vacante</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <form id="editJobForm">
+                                <div class="mb-3">
+                                    <label class="form-label">Título:</label>
+                                    <input type="text" class="form-control" id="editTitle" value="${title}" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Descripción:</label>
+                                    <textarea class="form-control" id="editDescription" rows="10" required>${description}</textarea>
+                                </div>
+                            </form>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary" onclick="saveJobEdit(${jobIndex})">Guardar</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const modalInstance = new bootstrap.Modal(modal);
+            modalInstance.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                document.body.removeChild(modal);
+            });
+        };
+        
+        // Save job edit
+        window.saveJobEdit = async function(jobIndex) {
+            const title = document.getElementById('editTitle').value;
+            const description = document.getElementById('editDescription').value;
+            
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('description', description);
+            
+            try {
+                const response = await fetch(`/edit-job/${jobIndex}`, {
+                    method: 'PUT',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                alert('Vacante actualizada exitosamente!');
+                location.reload();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar la vacante: ' + error.message);
+            }
+        };
+        
+        // Delete job function
+        window.deleteJob = async function(jobIndex) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta vacante?')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/delete-job/${jobIndex}`, {
+                    method: 'DELETE'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                alert('Vacante eliminada exitosamente!');
+                location.reload();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar la vacante: ' + error.message);
+            }
+        };
+
+        const jobFileInput = document.getElementById('jobFile');
+        const jobDescription = document.getElementById('jobDescription');
+        jobFileInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (file.name.endsWith('.pdf')) {
+                // PDF extraction
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument({data: typedarray}).promise;
+                    let text = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        text += content.items.map(item => item.str).join(' ') + '\n';
+                    }
+                    jobDescription.value = text.trim();
+                };
+                reader.readAsArrayBuffer(file);
+            } else if (file.name.endsWith('.docx')) {
+                // DOCX extraction
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const arrayBuffer = this.result;
+                    const doc = await window.docx.create(arrayBuffer);
+                    let text = '';
+                    doc.paragraphs.forEach(p => { text += p.text() + '\n'; });
+                    jobDescription.value = text.trim();
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+    </script>
+</body>
+</html> 
